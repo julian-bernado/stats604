@@ -11,6 +11,8 @@
 * Just outline the goals of the research project, don't introduce the data
 * Need to ask Johann about the project. In previous years, it was 8-12 pages (including graphs)
 * No specific template, include the pdf and markdown file.
+* Think of the write up as a memo (Johann's words)
+* No set limit or range for the length of the report (Johann's words) 
 
 ## Example Contribution (Julian)
 * I looked at the relation of chumbis to Joseph

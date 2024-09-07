@@ -7,6 +7,12 @@ output: html_document
 ```{r}
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(rlang))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tidyverse))
+
+
+
 data_path <- "../data/"
 file_names <- sapply(list.files(data_path), function(x){paste0(data_path, x) } )
 dfs <- lapply(file_names, readr::read_delim, show_col_types = FALSE)
@@ -77,5 +83,163 @@ for(i in 1:length(stain3_cols)){
        y = "density")
   dev.off()
 }
+```
 
+```{r}
+stain1_df |> 
+  group_by(plate, WellIndex, MEP) |>
+  summarise(count = n(), .groups = "drop") |>
+  filter(count > 15) |>
+  nrow()
+  
+stain2_df |> 
+  group_by(plate, WellIndex, MEP) |>
+  summarise(count = n(), .groups = "drop") |>
+  filter(count > 15)|>
+  nrow()
+stain3_df |> 
+  group_by(plate, WellIndex, MEP) |>
+  summarise(count = n(), .groups = "drop") |>
+  filter(count > 15) |>
+  nrow()
+```
+
+```{r}
+stain1_df |>
+  group_by(MEP) |>
+  summarise(
+    across(all_of(stain1_cols), max),
+    .groups = "drop"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) |>
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), 
+           ~ Ligand[which.max(.x)],
+           .names = "Ligand_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("Ligand_max_"), 
+               names_to = "Z_column", 
+               values_to = "Ligand") |>
+  group_by(Ligand) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  top_n(10, count) |>
+  ggplot(aes(x = reorder(Ligand,-count) , y = count, fill = Ligand)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Ligand",
+    title = "Top 10 Ligands In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 1 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+stain1_df |>
+  filter(Ligand != "FBS") |>
+  group_by(plate, WellIndex, MEP) |>
+  summarise(
+    across(all_of(stain1_cols), max),
+    .groups = "drop"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) |>
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), 
+           ~ Ligand[which.max(.x)],
+           .names = "Ligand_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("Ligand_max_"), 
+               names_to = "Z_column", 
+               values_to = "Ligand") |>
+  group_by(Ligand) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  top_n(10, count) |>
+  ggplot(aes(x = reorder(Ligand,-count) , y = count, fill = Ligand)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Ligand",
+    title = "Top 10 Ligands In terms of Counts (Excluding Control Well)",
+    subtitle = "Corresponding to the max value for each Stain 1 Metric for an ECMP"
+
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain2_df |>
+  group_by(MEP) |>
+  summarise(
+    across(all_of(stain2_cols), max),
+    .groups = "drop"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) |>
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain2_cols), 
+           ~ Ligand[which.max(.x)],
+           .names = "Ligand_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("Ligand_max_"), 
+               names_to = "Z_column", 
+               values_to = "Ligand") |>
+  group_by(Ligand) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  top_n(10, count) |>
+  ggplot(aes(x = reorder(Ligand,-count) , y = count, fill = Ligand)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Ligand",
+    title = "Top 10 Ligands In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 2 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain3_df |>
+  group_by(MEP) |>
+  summarise(
+    across(all_of(stain3_cols), max),
+    .groups = "drop"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) |>
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain3_cols), 
+           ~ Ligand[which.max(.x)],
+           .names = "Ligand_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("Ligand_max_"), 
+               names_to = "Z_column", 
+               values_to = "Ligand") |>
+  group_by(Ligand) |>
+  summarise(count = n()) |>
+  arrange(desc(count)) |>
+  top_n(10, count) |>
+  ggplot(aes(x = reorder(Ligand,-count) , y = count, fill = Ligand)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Ligand",
+    title = "Top 10 Ligands In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
 ```

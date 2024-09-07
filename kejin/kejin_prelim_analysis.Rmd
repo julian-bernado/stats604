@@ -1,0 +1,81 @@
+---
+title: "Prelim Analysis"
+author: "Kevin Jin"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+data_path <- "../data/"
+file_names <- sapply(list.files(data_path), function(x){paste0(data_path, x) } )
+dfs <- lapply(file_names, readr::read_delim, show_col_types = FALSE)
+```
+
+```{r}
+lapply(dfs, ncol)
+```
+
+```{r}
+lapply(dfs, function(x){x$ECMp |> unique() |> sort()}) 
+## Air/gelatin are nothing? still missing 2....
+
+lapply(dfs, function(x){x$Ligand |> unique() |> sort()}) 
+## Ligand is important, seems like FBS is the control
+```
+
+```{r}
+cols_keep <- c("WellIndex", "Well", "ArrayRow", "ArrayColumn", "ECMp", "Ligand", "MEP")
+dfs[[1]][,cols_keep]
+```
+
+```{r}
+col1 <- dfs[[1]] |> colnames()
+col2 <- dfs[[9]] |> colnames()
+col3 <- dfs[[17]] |> colnames()
+stain1_cols <- setdiff(col1,union(col2,col3))
+stain2_cols <- setdiff(col2,union(col1,col3))
+stain3_cols <- setdiff(col3,union(col2,col1))
+```
+
+```{r}
+stain1_df <- tibble()
+stain2_df <- tibble()
+stain3_df <- tibble()
+for(i in 1:8){
+  dfs[[i]]$plate <- rep(i, nrow(dfs[[i]]))
+  dfs[[i + 8]]$plate <- rep(i + 8, nrow(dfs[[i + 8]]))
+  dfs[[i + 16]]$plate <- rep(i + 16, nrow(dfs[[i + 16]]))
+  stain1_df <- rbind(stain1_df, dfs[[i]][,c("plate", cols_keep,stain1_cols)])
+  stain2_df <- rbind(stain2_df, dfs[[i + 8]][,c("plate", cols_keep,stain2_cols)])
+  stain3_df <- rbind(stain3_df, dfs[[i + 16]][,c("plate", cols_keep,stain3_cols)])
+}
+```
+
+```{r}
+for(i in 1:length(stain1_cols)){
+  var_name <- stain1_cols[i]
+  png(paste0("EDA/stain_1/",var_name, ".png"), width=4, height=4, units="in", res=300)
+
+  plot(density(stain1_df[[var_name]]), main = var_name, xlab = "val",
+       y = "density")
+  dev.off()
+}
+for(i in 1:length(stain2_cols)){
+  var_name <- stain2_cols[i]
+  png(paste0("EDA/stain_2/",var_name, ".png"), width=4, height=4, units="in", res=300)
+
+  plot(density(stain2_df[[var_name]]), main = var_name, xlab = "val",
+       y = "density")
+  dev.off()
+}
+for(i in 1:length(stain3_cols)){
+  var_name <- stain3_cols[i]
+  png(paste0("EDA/stain_3/",var_name, ".png"), width=4, height=4, units="in", res=300)
+
+  plot(density(stain3_df[[var_name]]), main = var_name, xlab = "val",
+       y = "density")
+  dev.off()
+}
+
+```

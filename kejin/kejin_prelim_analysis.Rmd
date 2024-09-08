@@ -269,33 +269,6 @@ stain1_df |>
 ```
 
 ```{r}
-stain1_df |>
-  # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
-  #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
-  #                           ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
-  #                           ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
-  #                           ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
-  #                           ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
-  #                           TRUE ~ "Else")) |> 
-  mutate(region = case_when(((ArrayColumn <= 10)) ~ "left",
-                          ((ArrayColumn >= 11)) ~ "right",
-                          TRUE ~ "Else")) |> 
-
-  group_by(region, ECMp) |>
-  summarise(
-    across(all_of(stain1_cols), func),
-    .groups = "drop"
-  ) |> 
-  filter(Cells_CP_Intensity_MedianIntensity_CellMask >= 3500)
-  ggplot(aes(x = region, y = Cells_CP_Intensity_MedianIntensity_CellMask)) +
-  geom_boxplot() +
-  labs(
-    y = stain1_cols[1]
-  )
-
-```
-
-```{r}
 stain2_df |>
   # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
   #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",

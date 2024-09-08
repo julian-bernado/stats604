@@ -36,23 +36,18 @@ dfs[[1]][,cols_keep]
 ```
 
 ```{r}
-col1 <- dfs[[1]] |> colnames()
-col2 <- dfs[[9]] |> colnames()
-col3 <- dfs[[17]] |> colnames()
-#print("Stain 1")
-stain1_cols <- setdiff(col1,union(col2,col3)); #stain1_cols
-#print("Stain 2")
-stain1_cols <- c(stain1_cols[c(4:6,9,10,13,14)])
-stain2_cols <- setdiff(col2,union(col1,col3)); #stain2_cols
-stain2_cols <- stain2_cols[c(3,4,7,8)]
-#print("Stain 3")
-stain3_cols <- setdiff(col3,union(col2,col1)); #stain3_cols
-stain3_cols <- stain3_cols[c(29,30)]
+col1 <- dfs[[1]] |> colnames(); #col1
+col2 <- dfs[[9]] |> colnames(); #col2
+col3 <- dfs[[17]] |> colnames(); #col3
+stain1_cols <- col1[c(114:116, 120:123, 128:130)]
+stain2_cols <- col2[c(114,115, 118:120, 126)]
+stain3_cols <- col3[c(110:112)]
 ```
 
 
 
 ```{r}
+colnames(dfs[[18]])
 stain1_df <- tibble()
 stain2_df <- tibble()
 stain3_df <- tibble()

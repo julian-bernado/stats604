@@ -209,3 +209,212 @@ stain3_df |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
 ```
+
+```{r}
+stain1_df |>
+  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+                            TRUE ~ "Else")) |> 
+  group_by(region, ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), 
+           ~ region[which.max(.x)],
+           .names = "region_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("region_max_"), 
+               names_to = "Z_column", 
+               values_to = "region") |>
+  group_by(region) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(region,-count) , y = count, fill = region)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Region",
+    title = "Top 10 Regions In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain2_df |>
+  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+                            TRUE ~ "Else")) |> 
+  group_by(region, ECMp) |>
+  summarise(
+    across(all_of(stain2_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain2_cols), 
+           ~ region[which.max(.x)],
+           .names = "region_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("region_max_"), 
+               names_to = "Z_column", 
+               values_to = "region") |>
+  group_by(region) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(region,-count) , y = count, fill = region)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Region",
+    title = "Top 10 Regions In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 2 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain3_df |>
+  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+                            TRUE ~ "Else")) |> 
+  group_by(region, ECMp) |>
+  summarise(
+    across(all_of(stain3_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain3_cols), 
+           ~ region[which.max(.x)],
+           .names = "region_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("region_max_"), 
+               names_to = "Z_column", 
+               values_to = "region") |>
+  group_by(region) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(region,-count) , y = count, fill = region)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Region",
+    title = "Top 10 Regions In terms of Counts",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain1_df |>
+  group_by(WellIndex, ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), 
+           ~ WellIndex[which.max(.x)],
+           .names = "WellIndex_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("WellIndex_max_"), 
+               names_to = "Z_column", 
+               values_to = "WellIndex") |>
+  group_by(WellIndex) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(WellIndex,-count) , y = count, fill = WellIndex)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Well Index",
+    title = "Well Indicies",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+
+```
+
+```{r}
+stain2_df |>
+  group_by(WellIndex, ECMp) |>
+  summarise(
+    across(all_of(stain2_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain2_cols), 
+           ~ WellIndex[which.max(.x)],
+           .names = "WellIndex_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("WellIndex_max_"), 
+               names_to = "Z_column", 
+               values_to = "WellIndex") |>
+  group_by(WellIndex) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(WellIndex,-count) , y = count, fill = WellIndex)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Well Index",
+    title = "Well Indicies",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+```{r}
+stain3_df |>
+  group_by(WellIndex, ECMp) |>
+  summarise(
+    across(all_of(stain3_cols), func),
+    .groups = "drop"
+  ) |> 
+  group_by(ECMp) |>
+  summarise(
+    across(all_of(stain3_cols), 
+           ~ WellIndex[which.max(.x)],
+           .names = "WellIndex_max_{col}")
+  ) |>
+  pivot_longer(cols = starts_with("WellIndex_max_"), 
+               names_to = "Z_column", 
+               values_to = "WellIndex") |>
+  group_by(WellIndex) |>
+  summarise(count = n()) |>
+  ggplot(aes(x = reorder(WellIndex,-count) , y = count, fill = WellIndex)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  labs(
+    y = "Count",
+    x = "Well Index",
+    title = "Well Indicies",
+    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+

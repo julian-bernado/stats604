@@ -36,23 +36,21 @@ dfs[[1]][,cols_keep]
 ```
 
 ```{r}
-dfs[[9]] |> colnames()
-```
-
-```{r}
 col1 <- dfs[[1]] |> colnames()
 col2 <- dfs[[9]] |> colnames()
 col3 <- dfs[[17]] |> colnames()
-print("Stain 1")
-stain1_cols <- setdiff(col1,union(col2,col3)); stain1_cols
-print("Stain 2")
-stain1_cols <- stain1_cols[c(4:6,9,10,13,14)]
-stain2_cols <- setdiff(col2,union(col1,col3)); stain2_cols
+#print("Stain 1")
+stain1_cols <- setdiff(col1,union(col2,col3)); #stain1_cols
+#print("Stain 2")
+stain1_cols <- c(stain1_cols[c(4:6,9,10,13,14)])
+stain2_cols <- setdiff(col2,union(col1,col3)); #stain2_cols
 stain2_cols <- stain2_cols[c(3,4,7,8)]
-print("Stain 3")
-stain3_cols <- setdiff(col3,union(col2,col1)); stain3_cols
+#print("Stain 3")
+stain3_cols <- setdiff(col3,union(col2,col1)); #stain3_cols
 stain3_cols <- stain3_cols[c(29,30)]
 ```
+
+
 
 ```{r}
 stain1_df <- tibble()
@@ -62,10 +60,23 @@ for(i in 1:8){
   dfs[[i]]$plate <- rep(i, nrow(dfs[[i]]))
   dfs[[i + 8]]$plate <- rep(i + 8, nrow(dfs[[i + 8]]))
   dfs[[i + 16]]$plate <- rep(i + 16, nrow(dfs[[i + 16]]))
-  stain1_df <- rbind(stain1_df, dfs[[i]][,c("plate", cols_keep,stain1_cols)])
-  stain2_df <- rbind(stain2_df, dfs[[i + 8]][,c("plate", cols_keep,stain2_cols)])
-  stain3_df <- rbind(stain3_df, dfs[[i + 16]][,c("plate", cols_keep,stain3_cols)])
+  stain1_df <- rbind(stain1_df, dfs[[i]][,c("plate", cols_keep, 
+                                            "Cells_CP_AreaShape_Area",
+                                            "Cytoplasm_CP_AreaShape_Area",
+                                            "Nuclei_CP_AreaShape_Area",
+                                            stain1_cols)])
+  stain2_df <- rbind(stain2_df, dfs[[i + 8]][,c("plate", cols_keep, 
+                                                "Cells_CP_AreaShape_Area",
+                                                "Cytoplasm_CP_AreaShape_Area",
+                                                "Nuclei_CP_AreaShape_Area",
+                                                stain2_cols)])
+  stain3_df <- rbind(stain3_df, dfs[[i + 16]][,c("plate", cols_keep, 
+                                                 "Nuclei_CP_AreaShape_Area",
+                                                 stain3_cols)])
 }
+saveRDS(stain1_df, "stain1_df.rds")
+saveRDS(stain2_df, "stain2_df.rds")
+saveRDS(stain3_df, "stain3_df.rds")
 ```
 
 ```{r}
@@ -222,13 +233,17 @@ stain3_df |>
 
 ```{r}
 stain1_df |>
-  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
-                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
-                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
-                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
-                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
-                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
-                            TRUE ~ "Else")) |> 
+  # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+  #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+  #                           ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+  #                           ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+  #                           ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+  #                           ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  #                           TRUE ~ "Else")) |> 
+  mutate(region = case_when(((ArrayColumn <= 10)) ~ "left",
+                          ((ArrayColumn >= 11)) ~ "right",
+                          TRUE ~ "Else")) |> 
+
   group_by(region, ECMp) |>
   summarise(
     across(all_of(stain1_cols), func),
@@ -252,21 +267,52 @@ stain1_df |>
     y = "Count",
     x = "Region",
     title = "Top 10 Regions In terms of Counts",
-    subtitle = "Corresponding to the max value for each Stain 3 Metric for an ECMP"
+    subtitle = "Corresponding to the max value for each Stain 1 Metric for an ECMP"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "none")
 ```
 
 ```{r}
+stain1_df |>
+  # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+  #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+  #                           ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+  #                           ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+  #                           ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+  #                           ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  #                           TRUE ~ "Else")) |> 
+  mutate(region = case_when(((ArrayColumn <= 10)) ~ "left",
+                          ((ArrayColumn >= 11)) ~ "right",
+                          TRUE ~ "Else")) |> 
+
+  group_by(region, ECMp) |>
+  summarise(
+    across(all_of(stain1_cols), func),
+    .groups = "drop"
+  ) |> 
+  filter(Cells_CP_Intensity_MedianIntensity_CellMask >= 3500)
+  ggplot(aes(x = region, y = Cells_CP_Intensity_MedianIntensity_CellMask)) +
+  geom_boxplot() +
+  labs(
+    y = stain1_cols[1]
+  )
+
+```
+
+```{r}
 stain2_df |>
-  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
-                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
-                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
-                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
-                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
-                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+  #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+  #                           ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+  #                           ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+  #                           ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+  #                           ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  #                           TRUE ~ "Else")) |> 
+  mutate(region = case_when(((ArrayColumn <= 10)) ~ "left",
+                            ((ArrayColumn >= 11)) ~ "right",
                             TRUE ~ "Else")) |> 
+
   group_by(region, ECMp) |>
   summarise(
     across(all_of(stain2_cols), func),
@@ -298,13 +344,22 @@ stain2_df |>
 
 ```{r}
 stain3_df |>
-  mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
-                            ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
-                            ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
-                            ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
-                            ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
-                            ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  # mutate(region = case_when(((ArrayRow <= 12) & (ArrayColumn <= 10)) ~ "top_left",
+  #                           ((ArrayRow <= 23) & (ArrayColumn <= 10)) ~ "mid_left",
+  #                           ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+  #                           ((ArrayRow <= 12) & (ArrayColumn >= 11)) ~ "top_right",
+  #                           ((ArrayRow <= 23) & (ArrayColumn >= 11)) ~ "mid_right",
+  #                           ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  #                           TRUE ~ "Else")) |> 
+  # mutate(region = case_when(((ArrayRow <= 17) & (ArrayColumn <= 10)) ~ "top_left",
+  #                         ((ArrayRow <= 35) & (ArrayColumn <= 10)) ~ "bot_left",
+  #                         ((ArrayRow <= 17) & (ArrayColumn >= 11)) ~ "top_right",
+  #                         ((ArrayRow <= 35) & (ArrayColumn >= 11)) ~ "bot_right",
+  #                         TRUE ~ "Else")) |> # |> select(ArrayRow, ArrayColumn, region)
+  mutate(region = case_when(((ArrayColumn <= 10)) ~ "left",
+                            ((ArrayColumn >= 11)) ~ "right",
                             TRUE ~ "Else")) |> 
+
   group_by(region, ECMp) |>
   summarise(
     across(all_of(stain3_cols), func),

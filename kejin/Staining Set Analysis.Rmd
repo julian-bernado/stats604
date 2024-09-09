@@ -1,0 +1,384 @@
+---
+title: "Staining Set Analysis"
+author: "Kevin Jin"
+output: html_document
+---
+
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(rlang))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tidyverse))
+
+stain1_df <- readRDS("stain1_df.rds") ## Lineage Status
+stain2_df <- readRDS("stain2_df.rds") ## Morphology and Metabolism
+stain3_df <- readRDS("stain3_df.rds") ## Cell Cycle and Nuclear Activity
+```
+
+```{r}
+## For Stains 1 or 2, environ one of Nuclei, Cells, Cytoplasm, Stain 3 is only Nuclei
+environ <- "Nuclei"; new_col <- paste0(environ, "_measure"); temp_df <- stain3_df |>  
+  select(starts_with(!!(environ))) |>
+  rename_with(function(x){
+    listy <- str_split(x, "_",simplify = FALSE)
+    sapply(listy, function(x){tail(x ,1)})
+  }); temp_df |>
+  mutate_at(2:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+  pivot_longer(
+    cols = 2:ncol(temp_df),
+    names_to = new_col,
+    values_to = "scaled_intensity"
+  ) |> 
+  #filter(get(new_col)  == "KRT19") |>
+  ggplot(aes(x = scaled_intensity, fill = get(new_col) )) +
+  geom_density() +
+  theme_minimal() +
+  labs(
+    y = "Scaled Integrated Intensity",
+    x = paste0(environ, " Area"),
+    title = paste(environ, "Environment Scaled Integrated Intensities"),
+    color = "Proteins"
+  )
+## In conclusion, area is positvely correlated with intensity of the various metrics
+```
+
+```{r}
+environ <- "Nuclei"; new_col <- paste0(environ, "_measure"); temp_df <- stain1_df |>  
+  select(MEP, starts_with(!!(environ))) |>
+  rename_with(function(x){
+    listy <- str_split(x, "_",simplify = FALSE)
+    sapply(listy, function(x){tail(x ,1)})
+  }); temp_df <- temp_df |>
+  mutate_at(3:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+  pivot_longer(
+    cols = 3:ncol(temp_df),
+    names_to = new_col,
+    values_to = "scaled_intensity"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) #|>
+#two_way_aov <- aov(scaled_intensity ~ Ligand * ECMp, data = temp_df)
+#summary(two_way_aov)
+#kruskal.test(scaled_intensity ~ Ligand, data = temp_df)
+dunn_results <- FSA::dunnTest(scaled_intensity ~ Ligand, data = temp_df, method = "bonferroni")
+dunn_results[[2]] |> 
+  filter(P.adj < 0.05, Z < 0)
+```
+```{r}
+environ <- "Nuclei"; new_col <- paste0(environ, "_measure"); temp_df <- stain1_df |>  
+  select(MEP, starts_with(!!(environ))) |>
+  rename_with(function(x){
+    listy <- str_split(x, "_",simplify = FALSE)
+    sapply(listy, function(x){tail(x ,1)})
+  }); temp_df |>
+  mutate_at(3:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+  pivot_longer(
+    cols = 3:ncol(temp_df),
+    names_to = new_col,
+    values_to = "scaled_intensity"
+  ) |> 
+  mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+         Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) |>
+  filter(Ligand %in% c("ANGPT1|1", "ANGPT2|1")) |>
+  ggplot(aes(x = Ligand, y = scaled_intensity)) +
+  geom_boxplot()
+```
+```{r}
+dunn_results[[2]] |> filter(P.adj < 0.05) |>
+  mutate(ligand_1 = str_split(Comparison, " - ", simplify = TRUE)[,1],
+         ligand_2 = str_split(Comparison, " - ", simplify = TRUE)[,2], 
+         higher_ligand = case_when(Z > 0 ~ ligand_1,
+                                   Z < 0 ~ ligand_2,
+                                   Z == 0 ~ "huh...")) |>
+  group_by(higher_ligand) |>
+  summarise(
+    counts = n()
+  ) |>
+  #top_n(25, counts) |>
+  ggplot(aes(x = reorder(higher_ligand,-counts), y = counts, fill = higher_ligand)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") +
+  labs(
+    y = "Counts",
+    x = "Ligands",
+    title = "Counts of Ligands",
+    subtitle = "Having significantly higher integrated scaled intensity than another Ligand"
+  )
+```
+
+```{r, ligands, eval = FALSE}
+for(stain in 1:3){
+  environs <- c("Cells", "Cytoplasm", "Nuclei")
+  if(stain == 1){
+    df <- stain1_df
+  } else if(stain == 2){
+    df <- stain2_df
+  } else{
+    df <- stain3_df
+    environs <- c("Nuclei")
+  }
+  for(environ in environs){
+    print(paste0("Stain ", stain, ": ", environ))
+    new_col <- paste0(environ, "_measure"); temp_df <- df |>  
+    select(starts_with(!!(environ))) |>
+    rename_with(function(x){
+      listy <- str_split(x, "_",simplify = FALSE)
+      sapply(listy, function(x){tail(x ,1)})
+    }); 
+    g <- temp_df |>
+    pivot_longer(
+      cols = 2:ncol(temp_df),
+      names_to = new_col,
+      values_to = "scaled_intensity"
+    ) |> 
+    ggplot(aes(x = Area, y = scaled_intensity, color = get(new_col) )) +
+    geom_point() +
+    theme_minimal() +
+    labs(
+      y = "Integrated Intensity",
+      x = paste0(environ, " Area"),
+      title = paste(environ, "Environment Integrated Intensities"),
+      color = "Proteins"
+    )
+    ggsave(paste0("figs/intensity_dists/stain_", stain, "_", environ, "_vs_area.pdf"), 
+           g, width=7, height=7)
+    g_scaled <- temp_df |>
+    mutate_at(2:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+    pivot_longer(
+      cols = 2:ncol(temp_df),
+      names_to = new_col,
+      values_to = "scaled_intensity"
+    ) |> 
+    ggplot(aes(x = Area, y = scaled_intensity, color = get(new_col) )) +
+    geom_point() +
+    theme_minimal() +
+    labs(
+      y = "Scaled Integrated Intensity",
+      x = paste0(environ, " Area"),
+      title = paste(environ, "Environment Scaled Integrated Intensities"),
+      color = "Proteins"
+    )
+    ggsave(paste0("figs/intensity_dists/stain_", stain, "_", environ, "_vs_area_scaled.pdf"), 
+           g_scaled, width=7, height=7)
+
+    g <- temp_df |>
+    pivot_longer(
+      cols = 2:ncol(temp_df),
+      names_to = new_col,
+      values_to = "scaled_intensity"
+    ) |> 
+    ggplot(aes(x = scaled_intensity, color = get(new_col) )) +
+    geom_density() +
+    theme_minimal() +
+    labs(
+      x = "Integrated Intensity",
+      title = paste(environ, "Environment Marginal Integrated Intensities"),
+      color = "Proteins"
+    )
+    ggsave(paste0("figs/intensity_dists/stain_", stain, "_", environ, "_marginals.pdf"), 
+           g, width=7, height=7)
+    g_scaled <- temp_df |>
+    mutate_at(2:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+    pivot_longer(
+      cols = 2:ncol(temp_df),
+      names_to = new_col,
+      values_to = "scaled_intensity"
+    ) |> 
+    ggplot(aes(x = scaled_intensity, color = get(new_col) )) +
+    geom_density() +
+    theme_minimal() +
+    labs(
+      x = "Scaled Integrated Intensity",
+      title = paste(environ, "Environment Marginal Scaled Integrated Intensities"),
+      color = "Proteins"
+    )
+    ggsave(paste0("figs/intensity_dists/stain_", stain, "_", environ, "_marginals_scaled.pdf"), 
+           g_scaled, width=7, height=7)
+        
+    temp_df <- df |>  
+      select(MEP, starts_with(!!(environ))) |>
+      rename_with(function(x){
+        listy <- str_split(x, "_",simplify = FALSE)
+        sapply(listy, function(x){tail(x ,1)})
+      }); 
+    temp_df <- temp_df |>
+      mutate_at(3:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+      pivot_longer(
+        cols = 3:ncol(temp_df),
+        names_to = new_col,
+        values_to = "scaled_intensity"
+      ) |> 
+      mutate(ECMp = str_split(MEP, "_", simplify = TRUE)[,1],
+             Ligand = str_split(MEP, "_", simplify = TRUE)[,2]) #|>
+    dunn_results <- suppressWarnings(FSA::dunnTest(scaled_intensity ~ Ligand, 
+                                                   data = temp_df, 
+                                                   method = "bonferroni"))
+    plot_data <- dunn_results[[2]] |> 
+      filter(P.adj < 0.05) |>
+      mutate(ligand_1 = str_split(Comparison, " - ", simplify = TRUE)[,1],
+             ligand_2 = str_split(Comparison, " - ", simplify = TRUE)[,2], 
+             higher_ligand = case_when(Z > 0 ~ ligand_1,
+                                       Z < 0 ~ ligand_2,
+                                       Z == 0 ~ "huh...")) |>
+      group_by(higher_ligand) |>
+      summarise(
+        counts = n()
+      ) 
+    print(paste0("Total # rows of dunnTest: ", nrow(dunn_results[[2]])))
+    print(paste0("Sig. # rows of dunnTest: ", nrow(filter(dunn_results[[2]], 
+                                                          P.adj < 0.05))))
+    bar <- plot_data |>
+      #top_n(25, counts) |>
+      ggplot(aes(x = reorder(higher_ligand,-counts), y = counts, fill = higher_ligand)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      labs(
+        y = "Counts",
+        x = "Ligands",
+        title = "Counts of Ligands",
+        subtitle = "Having significantly higher integrated scaled intensity than other Ligands"
+      )
+    ggsave(paste0("figs/ligands/stain_", stain, "_", environ, "_ligands.pdf"), 
+           bar, width=7, height=7)
+    bar_top25 <- plot_data |>
+      top_n(25, counts) |>
+      ggplot(aes(x = reorder(higher_ligand,-counts), y = counts, fill = higher_ligand)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      labs(
+        y = "Counts",
+        x = "Ligands",
+        title = "Counts of Ligands",
+        subtitle = "Having significantly higher integrated scaled intensity than other Ligands"
+      )
+    ggsave(paste0("figs/ligands/stain_", stain, "_", environ, "_ligands_top_25.pdf"), 
+           bar_top25, width=7, height=7)
+    bar_top10 <- plot_data |>
+      top_n(10, counts) |>
+      ggplot(aes(x = reorder(higher_ligand,-counts), y = counts, fill = higher_ligand)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      labs(
+        y = "Counts",
+        x = "Ligands",
+        title = "Counts of Ligands",
+        subtitle = "Having significantly higher integrated scaled intensity than other Ligands"
+      )
+    ggsave(paste0("figs/ligands/stain_", stain, "_", environ, "_ligands_top_10.pdf"), 
+           bar_top10, width=7, height=7)
+  }
+}
+```
+
+```{r, wells}
+for(stain in 1:3){
+  environs <- c("Cells", "Cytoplasm", "Nuclei")
+  if(stain == 1){
+    df <- stain1_df
+  } else if(stain == 2){
+    df <- stain2_df
+  } else{
+    df <- stain3_df
+    environs <- c("Nuclei")
+  }
+  df <- df |>
+    mutate(well_row = case_when(substring(Well, 1, 1) == "A" ~ 1,
+                                  substring(Well, 1, 1) == "B" ~ 2),
+           well_col = as.numeric(substring(Well,2,3)),
+           plate = case_when(plate %% 8 != 0 ~ plate %% 8,
+                             plate %% 8 == 0 ~ 8)
+    )
+  for(environ in environs){
+    print(paste0("Stain ", stain, ": ", environ))
+    temp_df <- df |>  
+      select(plate, well_row, well_col, ArrayRow, ArrayColumn, starts_with(!!(environ))) |>
+      rename_with(function(x){
+        listy <- str_split(x, "_",simplify = FALSE)
+        sapply(listy, function(x){tail(x ,1)})
+      }); 
+    temp_df <- temp_df |>
+      mutate_at(7:ncol(temp_df), ~(scale(.) %>% as.vector)) |> 
+      pivot_longer(
+        cols = 7:ncol(temp_df),
+        names_to = new_col,
+        values_to = "scaled_intensity"
+      )
+
+    heat_map <- temp_df |>
+      ggplot(aes(x = col, y = row, fill = scaled_intensity)) +
+      geom_raster() + 
+      viridis::scale_fill_viridis() + 
+      theme_bw()
+    ggsave(paste0("figs/data_artifacts/wells/stain_", stain, "_", environ, 
+                  "_well_heatmap_aggregate.pdf"),
+          heat_map, width = 10, height = 5)
+    for(plate in 1:8){
+      heat_map <- temp_df |>
+        filter(plate == !!(plate)) |>
+        ggplot(aes(x = col, y = row, fill = scaled_intensity)) +
+        geom_raster() + 
+        viridis::scale_fill_viridis() + 
+        theme_bw()
+      ggsave(paste0("figs/data_artifacts/wells/stain_", stain, "_", environ, 
+                    "_well_heatmap_plate_", plate, ".pdf"),
+            heat_map, width = 10, height = 5)
+    }
+    heat_map <- temp_df |>
+      ggplot(aes(x = ArrayColumn, y = ArrayRow, fill = scaled_intensity)) +
+      geom_raster(interpolate = TRUE) + 
+      viridis::scale_fill_viridis() + 
+      theme_bw()
+    ggsave(paste0("figs/data_artifacts/arrays/stain_", stain, "_", environ, 
+                  "_Array_heatmap_aggregate.pdf"),
+          heat_map, width = 10, height = 5)
+    heat_map <- temp_df |>
+      filter(row == 1) |>
+      ggplot(aes(x = ArrayColumn, y = ArrayRow, fill = scaled_intensity)) +
+      geom_raster(interpolate = TRUE) + 
+      viridis::scale_fill_viridis() + 
+      theme_bw()
+    ggsave(paste0("figs/data_artifacts/arrays/stain_", stain, "_", environ, 
+                  "_Array_heatmap_top.pdf"),
+          heat_map, width = 10, height = 5)
+    heat_map <- temp_df |>
+      filter(row == 2) |>
+      ggplot(aes(x = ArrayColumn, y = ArrayRow, fill = scaled_intensity)) +
+      geom_raster(interpolate = TRUE) + 
+      viridis::scale_fill_viridis() + 
+      theme_bw()
+    ggsave(paste0("figs/data_artifacts/arrays/stain_", stain, "_", environ, 
+                  "_Array_heatmap_bottom.pdf"),
+          heat_map, width = 10, height = 5)
+
+    
+    # dunn_results <- suppressWarnings(FSA::dunnTest(scaled_intensity ~ Well, 
+    #                                                data = temp_df, 
+    #                                                method = "bonferroni"))
+    # dunn_results[[2]] |> View()
+    #   filter(P.adj < 0.05) |>
+    # bar <- plot_data |>
+    #   #top_n(25, counts) |>
+    #   ggplot(aes(x = reorder(higher_ligand,-counts), y = counts, fill = higher_ligand)) +
+    #   geom_bar(stat = "identity") +
+    #   theme_minimal() + 
+    #   theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    #         legend.position = "none") +
+    #   labs(
+    #     y = "Counts",
+    #     x = "Ligands",
+    #     title = "Counts of Ligands",
+    #     subtitle = "Having significantly higher integrated scaled intensity than other Ligands"
+    #   )
+  }
+}
+```
